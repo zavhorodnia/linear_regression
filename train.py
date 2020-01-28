@@ -48,7 +48,6 @@ def train():
         theta0 -= learning_rate * average_theta0()
         theta1 -= learning_rate * average_theta1()
         cost = cost_function()
-    print(prev_cost)
 
 
 def denormalize():
@@ -72,11 +71,10 @@ if __name__ == "__main__":
     delta = max_x - min_x
     normalized_data = normalize()
     train()
-    print(theta0, theta1)
     denormalize()
-    plt.scatter(list(map(lambda i: i[1], data)), list(map(lambda i: i[0], data)))
-    xs = list(map(lambda i: i[0], data))
-    plt.plot(list(map(lambda i: estimate_price(i), xs)), xs)
-    plt.show()
-    print(theta0, theta1)
-    print(estimate_price(240000.0))
+    with open ('thetas', 'w') as fd:
+        fd.write(' '.join(map(str, [theta0, theta1])))
+    # plt.scatter(list(map(lambda i: i[1], data)), list(map(lambda i: i[0], data)))
+    # xs = list(map(lambda i: i[0], data))
+    # plt.plot(list(map(lambda i: estimate_price(i), xs)), xs)
+    # plt.show()
