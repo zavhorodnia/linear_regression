@@ -16,7 +16,9 @@ if __name__ == "__main__":
     try:
         print("Enter car mileage:", end=" ")
         mileage = float(input())
+        if mileage < 0.0:
+            raise
         theta0, theta1 = get_thetas()
-        print("Predicted cost:", predict(theta0, theta1, mileage))
+        print("Predicted cost:", round(predict(theta0, theta1, mileage), 2))
     except:
         print('Error!')

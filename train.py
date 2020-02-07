@@ -1,4 +1,7 @@
+from sys import argv
+import argparse
 import csv
+import numpy as np
 import matplotlib.pyplot as plt
 #km, price
 # x    y
@@ -16,31 +19,31 @@ def estimate_price(miles):
 
 
 def cost_function():
-    global normalized_data, m
+    global standartized_xs, prices, m
     cost = 0.0
-    for x, y in normalized_data:
-        cost += (estimate_price(x) - y) ** 2
+    for miles, price in zip(standartized_xs, prices):
+        cost += (estimate_price(miles) - price) ** 2
     return cost / m
 
 
 def average_theta0():
-    global normalized_data, m
+    global standartized_xs, prices, m
     avg_sum = 0.0
-    for row in normalized_data:
-        avg_sum += estimate_price(row[0]) - row[1]
+    for miles, price in zip(standartized_xs, prices):
+        avg_sum += estimate_price(miles) - price
     return avg_sum / m
 
 
 def average_theta1():
-    global normalized_data, m
+    global standartized_xs, prices, m
     avg_sum = 0.0
-    for row in normalized_data:
-        avg_sum += (estimate_price(row[0]) - row[1]) * row[0]
+    for miles, price in zip(standartized_xs, prices):
+        avg_sum += (estimate_price(miles) - price) * miles
     return avg_sum / m
 
 
-def train():
-    global theta0, theta1, data
+def train(args):
+    global theta0, theta1
     cost = 0
     prev_cost = 1
     while abs(prev_cost - cost) > float(0.0003):
@@ -48,33 +51,62 @@ def train():
         theta0 -= learning_rate * average_theta0()
         theta1 -= learning_rate * average_theta1()
         cost = cost_function()
+    if args.mse:
+        print("Mean squared error:", cost)
 
 
-def denormalize():
-    global delta, theta1
-    theta1 /= delta
+
+def restore_thetas(avg, std):
+    global theta0, theta1
+    theta0 -= (theta1 * avg / std)
+    theta1 /= std
 
 
-def normalize():
-    global data, min_x, delta
-    return list(map(lambda i: (((i[0] - min_x) / delta), i[1]), data))
+def standartize(xs):
+    avg = np.average(xs)
+    std = np.std(xs)
+    return avg, std, list(map(lambda x: (x - avg) / std, xs))
 
+
+def read_csv(filename):
+    try:
+        with open(filename, 'r') as fd:
+            reader = csv.reader(fd)
+            next(reader, None)
+            mileages = []
+            prices = []
+            for row in reader:
+                mileages.append(float(row[0]))
+                prices.append(float(row[1]))
+        return np.array(mileages), np.array(prices), len(mileages)
+    except:
+        print("Error reading data file")
+        exit(0)
+
+
+def write_thetas():
+    global theta0, theta1
+    try:
+        with open ('thetas', 'w') as fd:
+            fd.write(' '.join(map(str, [theta0, theta1])))
+    except:
+        print("Error writing thetas")
+        exit(0)
 
 if __name__ == "__main__":
-    with open('data.csv', 'r') as fd:
-        reader = csv.reader(fd)
-        next(reader, None)
-        data = list(map(lambda i: (float(i[0]), float(i[1])), map(tuple, reader)))
-    m = len(data)
-    max_x = max(data, key= lambda i : i[0])[0]
-    min_x = min(data, key= lambda i : i[0])[0]
-    delta = max_x - min_x
-    normalized_data = normalize()
-    train()
-    denormalize()
-    with open ('thetas', 'w') as fd:
-        fd.write(' '.join(map(str, [theta0, theta1])))
-    # plt.scatter(list(map(lambda i: i[1], data)), list(map(lambda i: i[0], data)))
-    # xs = list(map(lambda i: i[0], data))
-    # plt.plot(list(map(lambda i: estimate_price(i), xs)), xs)
-    # plt.show()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('file', action='store', help='csv file with data for training')
+    parser.add_argument('-m', '--mse', help='mean squared error', default='False', action='store_true')
+    parser.add_argument('-d', '--display-graph', help='algorithm visualization', default='False', action='store_true')
+    args = parser.parse_args()
+    mileages, prices, m = read_csv(args.file)
+    avg, std, standartized_xs = standartize(mileages)
+    train(args)
+    restore_thetas(avg, std)
+    write_thetas()
+    if args.display_graph:
+        plt.scatter(mileages, prices)
+        plt.plot(mileages, list(map(lambda i: estimate_price(i), mileages)), color='r')
+        plt.xlabel('mileage')
+        plt.ylabel('price')
+        plt.show()
